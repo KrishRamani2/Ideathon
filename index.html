@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>NeoTrack Nexus – Fund Flow Intelligence</title>
+    <meta name="description"
+        content="NeoTrack Nexus: Professional fund flow monitoring and network analytics dashboard.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <canvas id="three-bg"></canvas>
+
+    <header id="header">
+        <div class="hamburger" onclick="toggleSidebar()"><i class="ri-menu-line"></i></div>
+        <div id="logo">
+            <span style="color:#ff8c00;margin-right:8px;font-size:16px"><i class="ri-shield-keyhole-line"></i></span>
+            NEOTRACK NEXUS
+        </div>
+        <div class="header-controls">
+            <button class="hdr-btn" onclick="refreshData()"><i class="ri-refresh-line"></i> Refresh</button>
+            <button class="hdr-btn" onclick="exportViz()"><i class="ri-download-2-line"></i> Export</button>
+            <button class="hdr-btn" id="themePulseBtn" onclick="toggleThemePulse()"><i class="ri-pulse-line"></i>
+                Pulse</button>
+            <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px"></div>
+            <span
+                style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#8a8a8a;letter-spacing:1px;text-transform:uppercase"
+                id="headerClock"></span>
+        </div>
+    </header>
+
+    <div id="app">
+        <nav id="sidebar">
+            <div class="sidebar-section">
+                <div class="nav-item active" data-section="dashboard" onclick="switchSection('dashboard',this)">
+                    <i class="ri-dashboard-line nav-icon"></i><span class="nav-label">Dashboard</span>
+                    <div class="nav-sub"><span>Overview</span><span>Summary Stats</span></div>
+                </div>
+                <div class="nav-item" data-section="fundflows" onclick="switchSection('fundflows',this)">
+                    <i class="ri-git-branch-line nav-icon"></i><span class="nav-label">Fund Flows</span>
+                    <div class="nav-sub"><span>Knowledge Graph</span><span>Path Tracing</span><span>Layering
+                            Detection</span></div>
+                </div>
+                <div class="nav-item" data-section="anomalies" onclick="switchSection('anomalies',this)">
+                    <i class="ri-alarm-warning-line nav-icon"></i><span class="nav-label">Anomaly Alerts</span>
+                    <div class="nav-sub"><span>Critical Alerts</span><span>Pattern Matches</span></div>
+                </div>
+                <div class="nav-item" data-section="metrics" onclick="switchSection('metrics',this)">
+                    <i class="ri-line-chart-line nav-icon"></i><span class="nav-label">Real-Time Metrics</span>
+                    <div class="nav-sub"><span>Velocity Charts</span><span>Flow Volume</span><span>Sankey Flows</span>
+                    </div>
+                </div>
+                <div class="nav-item" data-section="heatmap" onclick="switchSection('heatmap',this)">
+                    <i class="ri-fire-line nav-icon"></i><span class="nav-label">Risk Heatmap</span>
+                    <div class="nav-sub"><span>Branch Analysis</span><span>Geo Risk Zones</span></div>
+                </div>
+                <div class="nav-item" data-section="profile" onclick="switchSection('profile',this)">
+                    <i class="ri-user-search-line nav-icon"></i><span class="nav-label">Profile Scanner</span>
+                    <div class="nav-sub"><span>Entity Lookup</span><span>Risk Assessment</span></div>
+                </div>
+                <div class="nav-item" data-section="evidence" onclick="switchSection('evidence',this)">
+                    <i class="ri-folder-shield-2-line nav-icon"></i><span class="nav-label">Export Evidence</span>
+                    <div class="nav-sub"><span>STR Packages</span><span>FIU Reports</span></div>
+                </div>
+            </div>
+            <div style="flex:1"></div>
+            <crazy-toggle class="crazy-toggle" id="crazyBtn" onclick="toggleCrazy()"><i class="ri-flashlight-line"></i>
+                Crazy
+                Mode</crazy-toggle>
+        </nav>
+
+        <main id="main">
+            <!-- DASHBOARD -->
+            <div class="section active" id="sec-dashboard">
+                <div class="section-header">
+                    <h2><i class="ri-dashboard-line"></i> Dashboard Overview</h2>
+                    <span class="drag-hint"><i class="ri-drag-move-line"></i> Drag panels to rearrange</span>
+                </div>
+                <div class="cards-grid" id="statsGrid"></div>
+                <div class="drag-grid" id="dashGrid">
+                    <div class="drag-panel" draggable="true" data-panel="velocity">
+                        <div class="panel-header"><i class="ri-speed-line"></i> Transaction Velocity</div>
+                        <div id="dash-velocity" style="height:260px"></div>
+                    </div>
+                    <div class="drag-panel" draggable="true" data-panel="network">
+                        <div class="panel-header"><i class="ri-share-line"></i> Network Activity</div>
+                        <div id="mini-graph" style="height:260px"></div>
+                    </div>
+                    <div class="drag-panel full-width" draggable="true" data-panel="sankey">
+                        <div class="panel-header"><i class="ri-route-line"></i> Fund Flow Sankey</div>
+                        <div id="dash-sankey" style="height:300px"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FUND FLOWS -->
+            <div class="section" id="sec-fundflows">
+                <div class="section-header">
+                    <h2><i class="ri-git-branch-line"></i> Knowledge Graph – Fund Flow Network</h2>
+                </div>
+                <div class="panel">
+                    <div id="graph-container"></div>
+                    <div class="tooltip" id="graphTooltip"></div>
+                </div>
+            </div>
+
+            <!-- ANOMALIES -->
+            <div class="section" id="sec-anomalies">
+                <div class="section-header">
+                    <h2><i class="ri-alarm-warning-line"></i> Anomaly Alert Feed</h2>
+                </div>
+                <div class="panel">
+                    <div id="alertFeed"></div>
+                </div>
+            </div>
+
+            <!-- METRICS -->
+            <div class="section" id="sec-metrics">
+                <div class="section-header">
+                    <h2><i class="ri-line-chart-line"></i> Real-Time Metrics</h2>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><i class="ri-speed-line"></i> Transaction Velocity</div>
+                    <div id="linechart-container" style="height:300px"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><i class="ri-route-line"></i> Fund Flow Sankey</div>
+                    <div id="sankey-container" style="height:400px"></div>
+                </div>
+            </div>
+
+            <!-- HEATMAP (FULL PAGE) -->
+            <div class="section" id="sec-heatmap">
+                <div class="section-header">
+                    <h2><i class="ri-fire-line"></i> Branch Risk Heatmap</h2>
+                </div>
+                <div class="panel">
+                    <div id="heatmap-container" style="height:calc(100vh - 160px)"></div>
+                </div>
+            </div>
+
+            <!-- PROFILE -->
+            <div class="section" id="sec-profile">
+                <div class="section-header">
+                    <h2><i class="ri-user-search-line"></i> Entity Profile Scanner</h2>
+                </div>
+                <div class="panel">
+                    <div id="profileArea"></div>
+                </div>
+            </div>
+
+            <!-- EVIDENCE -->
+            <div class="section" id="sec-evidence">
+                <div class="section-header">
+                    <h2><i class="ri-folder-shield-2-line"></i> Evidence Export Center</h2>
+                </div>
+                <div class="panel">
+                    <div class="export-grid">
+                        <div class="export-item" onclick="alert('Generating STR PDF...')"><i
+                                class="ri-file-pdf-2-line ei-icon"></i>
+                            <div class="ei-label">STR Report</div>
+                        </div>
+                        <div class="export-item" onclick="alert('Exporting Graph PNG...')"><i
+                                class="ri-image-line ei-icon"></i>
+                            <div class="ei-label">Graph Snapshot</div>
+                        </div>
+                        <div class="export-item" onclick="alert('Generating Timeline CSV...')"><i
+                                class="ri-file-excel-2-line ei-icon"></i>
+                            <div class="ei-label">Timeline CSV</div>
+                        </div>
+                        <div class="export-item" onclick="alert('Packaging FIU Bundle...')"><i
+                                class="ri-archive-line ei-icon"></i>
+                            <div class="ei-label">FIU Package</div>
+                        </div>
+                        <div class="export-item" onclick="alert('Exporting Sankey SVG...')"><i
+                                class="ri-flow-chart ei-icon"></i>
+                            <div class="ei-label">Sankey Export</div>
+                        </div>
+                        <div class="export-item" onclick="alert('Creating Audit Log...')"><i
+                                class="ri-shield-check-line ei-icon"></i>
+                            <div class="ei-label">Audit Trail</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <svg style="position:absolute;width:0;height:0">
+        <filter id="wavy">
+            <feTurbulence type="turbulence" baseFrequency="0.01" numOctaves="3" result="t" />
+            <feDisplacementMap in="SourceGraphic" in2="t" scale="5" />
+        </filter>
+    </svg>
+    <script src="script.js"></script>
+</body>
+
+</html>
