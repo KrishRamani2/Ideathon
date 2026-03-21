@@ -93,7 +93,10 @@
             <div class="section active" id="sec-dashboard">
                 <div class="section-header">
                     <h2><i class="ri-dashboard-line"></i> Dashboard Overview</h2>
-                    <span class="drag-hint"><i class="ri-drag-move-line"></i> Drag panels to rearrange</span>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <span class="drag-hint"><i class="ri-drag-move-line"></i> Drag panels to rearrange</span>
+                        <button class="hdr-btn" onclick="resetDashboardLayout()" style="padding:4px 10px; font-size:10px;"><i class="ri-layout-masonry-line"></i> Reset Layout</button>
+                    </div>
                 </div>
                 <div class="cards-grid" id="statsGrid"></div>
                 <div class="drag-grid" id="dashGrid">

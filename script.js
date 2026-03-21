@@ -346,7 +346,25 @@ function renderMiniGraphs() {
 }
 
 // ==================== GENERAL INIT ====================
+function resetDashboardLayout() {
+    document.querySelectorAll('.drag-panel').forEach(p => p.style.display = 'block');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Inject close options to customizing dashboard panels
+    document.querySelectorAll('.drag-panel .panel-header').forEach(hdr => {
+        const closeBtn = document.createElement('i');
+        closeBtn.className = 'ri-close-line';
+        closeBtn.style.cssText = 'margin-left:auto; cursor:pointer; font-size:16px; opacity:0.6; transition:0.2s;';
+        closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+        closeBtn.onmouseout = () => closeBtn.style.opacity = '0.6';
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            hdr.closest('.drag-panel').style.display = 'none';
+        };
+        hdr.appendChild(closeBtn);
+    });
+
     renderStats();
     renderMiniGraphs();
     initLineChart();
@@ -392,32 +410,58 @@ function initForceGraph() {
 }
 
 // ==================== REAL-TIME METRICS (LINE CHART) ====================
+let chartOffset = 0;
 function drawLineChart(cid) {
     const el = document.getElementById(cid); if (!el) return;
-    el.innerHTML = '';
     const w = el.clientWidth || 600, h = el.clientHeight || 260;
     const isDark = getTheme() === 'dark';
-    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${w} ${h}`);
     
-    const data1 = Array.from({length: 40}, (_, i) => ({x: i, y: 30 + Math.sin(i*0.2)*20 + R(0,10)}));
-    const data2 = Array.from({length: 40}, (_, i) => ({x: i, y: 15 + Math.cos(i*0.3)*10 + R(0,5)}));
+    if (!el._svg) {
+        el.innerHTML = '';
+        el._svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${w} ${h}`);
+        
+        const defs = el._svg.append('defs');
+        const cg = (id, c1, c2) => {
+            const g = defs.append('linearGradient').attr('id', id).attr('x1','0%').attr('y1','0%').attr('x2','0%').attr('y2','100%');
+            g.append('stop').attr('offset','0%').style('stop-color',c1).style('stop-opacity',0.6);
+            g.append('stop').attr('offset','100%').style('stop-color',c2).style('stop-opacity',0.05);
+        };
+        cg('gBlue', '#3b82f6', '#3b82f6');
+        cg('gCyan', '#00e676', '#00e676');
+        cg('gPurp', '#a855f7', '#a855f7');
 
-    const xS = d3.scaleLinear().domain([0, 39]).range([30, w-10]);
-    const yS = d3.scaleLinear().domain([0, 70]).range([h-30, 10]);
+        el._g1 = el._svg.append('path').attr('fill', 'url(#gBlue)').attr('stroke', 'none');
+        el._g2 = el._svg.append('path').attr('fill', 'url(#gCyan)').attr('stroke', 'none');
+        el._g3 = el._svg.append('path').attr('fill', 'url(#gPurp)').attr('stroke', 'none');
 
-    const area = d3.area().x(d => xS(d.x)).y0(h-30).y1(d => yS(d.y)).curve(d3.curveMonotoneX);
-    const line = d3.line().x(d => xS(d.x)).y(d => yS(d.y)).curve(d3.curveMonotoneX);
+        el._l1 = el._svg.append('path').attr('fill', 'none').attr('stroke', '#3b82f6').attr('stroke-width', 2);
+        el._l2 = el._svg.append('path').attr('fill', 'none').attr('stroke', '#00e676').attr('stroke-width', 2);
+        el._l3 = el._svg.append('path').attr('fill', 'none').attr('stroke', '#a855f7').attr('stroke-width', 2);
 
-    svg.append('path').datum(data1).attr('fill', 'rgba(59, 130, 246, 0.2)').attr('d', area);
-    svg.append('path').datum(data1).attr('fill', 'none').attr('stroke', '#3b82f6').attr('stroke-width', 2).attr('d', line);
+        // Remove axes lines to match the sleek premium feel of the user's layout screenshot
+        el._xA = el._svg.append('g').attr('transform', `translate(0,${h-10})`).attr('color', isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.2)');
+    }
     
-    svg.append('path').datum(data2).attr('fill', 'rgba(0, 230, 118, 0.2)').attr('d', area);
-    svg.append('path').datum(data2).attr('fill', 'none').attr('stroke', '#00e676').attr('stroke-width', 2).attr('d', line);
+    // Adjusted y logic so traces overlap distinctly like in the image
+    const data1 = Array.from({length: 40}, (_, i) => ({x: i, y: 35 + Math.sin((i-chartOffset)*0.2)*20 + R(0,5)}));
+    const data2 = Array.from({length: 40}, (_, i) => ({x: i, y: 25 + Math.cos((i-chartOffset)*0.25)*15 + R(0,4)}));
+    const data3 = Array.from({length: 40}, (_, i) => ({x: i, y: 20 + Math.sin((i-chartOffset*1.3)*0.4)*12 + R(0,3)}));
 
-    svg.append('g').attr('transform', `translate(0,${h-30})`).call(d3.axisBottom(xS).ticks(6)).attr('color', isDark?'#666':'#999');
-    svg.append('g').attr('transform', `translate(30,0)`).call(d3.axisLeft(yS).ticks(4)).attr('color', isDark?'#666':'#999');
+    const xS = d3.scaleLinear().domain([0, 39]).range([10, w-10]);
+    const yS = d3.scaleLinear().domain([0, 70]).range([h-10, 20]);
+
+    const area = d3.area().x(d => xS(d.x)).y0(h).y1(d => yS(d.y)).curve(d3.curveBasis);
+    const line = d3.line().x(d => xS(d.x)).y(d => yS(d.y)).curve(d3.curveBasis);
+
+    el._g1.datum(data1).attr('d', area); el._l1.datum(data1).attr('d', line);
+    el._g2.datum(data2).attr('d', area); el._l2.datum(data2).attr('d', line);
+    el._g3.datum(data3).attr('d', area); el._l3.datum(data3).attr('d', line);
 }
-function initLineChart() { drawLineChart('linechart-container'); drawLineChart('dash-velocity'); drawLineChart('risk-trend-chart'); }
+function initLineChart() {
+    if (!window._lineInt) {
+        window._lineInt = setInterval(() => { chartOffset += 0.5; drawLineChart('linechart-container'); drawLineChart('dash-velocity'); drawLineChart('risk-trend-chart'); }, 50);
+    }
+}
 
 // ==================== HEATMAP ====================
 function initFullHeatmap() {
@@ -472,9 +516,24 @@ function drawSankey(cid) {
     links.forEach(l => {
         const s = nodes[l.s], t = nodes[l.t];
         const path = `M${s.x+20},${l.sy} C${(s.x+t.x)/2},${l.sy} ${(s.x+t.x)/2},${l.ty} ${t.x},${l.ty}`;
-        svg.append('path').attr('d', path).attr('fill', 'none')
+        const pNode = svg.append('path').attr('d', path).attr('fill', 'none')
            .attr('stroke', isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')
-           .attr('stroke-width', l.w);
+           .attr('stroke-width', l.w).node();
+
+        function spawnParticle() {
+            if(!document.getElementById(cid)) return;
+            const particle = svg.append('circle').attr('r', 2.5).attr('fill', '#00e676').attr('opacity', 0.8);
+            const len = pNode.getTotalLength();
+            particle.transition().duration(R(1500, 3000)).ease(d3.easeLinear)
+                .attrTween('transform', function() {
+                    return function(t) {
+                        const pt = pNode.getPointAtLength(t * len);
+                        return `translate(${pt.x},${pt.y})`;
+                    };
+                })
+                .on('end', () => { particle.remove(); setTimeout(spawnParticle, R(500, 2000)); });
+        }
+        setTimeout(spawnParticle, R(0, 2000));
     });
 }
 function initSankey() { drawSankey('sankey-container'); drawSankey('dash-sankey'); }
@@ -515,11 +574,48 @@ function renderRiskSection() {
         </div>
     `).join('');
     
-    const donut = document.getElementById('risk-category-chart');
-    if(donut) donut.innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"><div style="width:150px; height:150px; border-radius:50%; border:20px solid #ff9800; border-top-color:#ff3d3d; border-right-color:#00e676;"></div></div>';
-    
-    document.getElementById('dash-donut').innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"><div style="width:120px; height:120px; border-radius:50%; border:15px solid #3b82f6; border-top-color:#ef6c00;"></div></div>';
-    document.getElementById('dash-radar').innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"><div style="width:140px; height:140px; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); background:rgba(255,140,0,0.2); border:1px solid #ff8c00;"></div></div>';
+    const isDark = getTheme() === 'dark';
+    const drawDonut = (cid, size) => {
+        const el = document.getElementById(cid); if(!el) return;
+        el.innerHTML = ''; const srcData = [R(30,50), R(20,40), R(10,30), R(5,15)];
+        const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${size} ${size}`).style('max-width', size + 'px').style('margin', '0 auto').style('display', 'block').append('g').attr('transform', `translate(${size/2},${size/2})`);
+        const p = d3.pie()(srcData); const a = d3.arc().innerRadius(size/3).outerRadius(size/2 - 10);
+        svg.selectAll('path').data(p).enter().append('path').attr('d', a).attr('fill', (d,i) => ['#ff3d3d','#ff9800','#3b82f6','#00e676'][i]).attr('stroke', isDark?'#000':'#fff').attr('stroke-width', 2);
+        
+        const labels = ['High', 'Med', 'Low', 'Info'];
+        svg.selectAll('text').data(p).enter().append('text')
+            .attr('transform', d => `translate(${a.centroid(d)})`)
+            .attr('dy', '0.35em').attr('text-anchor', 'middle')
+            .attr('fill', '#fff').attr('font-size', '10px').attr('font-family', 'Share Tech Mono, monospace')
+            .text((d,i) => labels[i]);
+    };
+    drawDonut('risk-category-chart', 200); drawDonut('dash-donut', 150);
+
+    const drawRadar = (cid, size) => {
+        const el = document.getElementById(cid); if(!el) return;
+        const cx = size/2, cy = size/2, r = size/2 - 20;
+        let poly = '', grid = '';
+        const pts = [];
+        for(let i=0; i<6; i++) {
+            const angle = (Math.PI/3)*i - Math.PI/2;
+            const len = R(40,100)/100;
+            const px = cx + Math.cos(angle)*r*len, py = cy + Math.sin(angle)*r*len;
+            poly += `${px},${py} `;
+            pts.push({x: px, y: py});
+            grid += `<line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(angle)*r}" y2="${cy + Math.sin(angle)*r}" stroke="${isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'}" stroke-width="1"/>`;
+        }
+        el.innerHTML = `<svg viewBox="0 0 ${size} ${size}" style="max-width:${size}px; margin:0 auto; display:block;">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'}" stroke-width="1"/>
+            <circle cx="${cx}" cy="${cy}" r="${r*0.66}" fill="none" stroke="${isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'}" stroke-width="1"/>
+            <circle cx="${cx}" cy="${cy}" r="${r*0.33}" fill="none" stroke="${isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'}" stroke-width="1"/>
+            ${grid}
+            <polygon points="${poly}" fill="rgba(59,130,246,0.2)" stroke="#3b82f6" stroke-width="2"/>
+            ${pts.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#3b82f6"/>
+                <text x="${cx + Math.cos((Math.PI/3)*i - Math.PI/2)*(r+14)}" y="${cy + Math.sin((Math.PI/3)*i - Math.PI/2)*(r+14)}" fill="${isDark?'#aaa':'#555'}" font-size="9px" font-family="Share Tech Mono, monospace" text-anchor="middle" dominant-baseline="middle">${['Velocity', 'Volume', 'Links', 'Hops', 'Alerts', 'Dormant'][i]}</text>`
+            ).join('')}
+        </svg>`;
+    };
+    drawRadar('dash-radar', 160);
 }
 
 function renderAlerts() {
