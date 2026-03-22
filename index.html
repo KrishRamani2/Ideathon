@@ -50,12 +50,8 @@
                 </div>
                 <div class="nav-item" data-section="fraud" onclick="switchSection('fraud',this)">
                     <i class="ri-spy-line nav-icon"></i><span class="nav-label">Fraud Detection</span>
-                    <div class="nav-sub"><span>Network Analysis</span><span>Pattern Detection</span><span>Hidden Influence</span></div>
-                </div>
-                <div class="nav-item" data-section="fundflows" onclick="switchSection('fundflows',this)">
-                    <i class="ri-git-branch-line nav-icon"></i><span class="nav-label">Fund Flows</span>
-                    <div class="nav-sub"><span>Knowledge Graph</span><span>Path Tracing</span><span>Layering
-                            Detection</span></div>
+                    <div class="nav-sub"><span>Network Analysis</span><span>Pattern Detection</span><span>Hidden
+                            Influence</span></div>
                 </div>
                 <div class="nav-item" data-section="anomalies" onclick="switchSection('anomalies',this)">
                     <i class="ri-alarm-warning-line nav-icon"></i><span class="nav-label">Anomaly Alerts</span>
@@ -95,13 +91,15 @@
                     <h2><i class="ri-dashboard-line"></i> Dashboard Overview</h2>
                     <div style="display:flex; gap:12px; align-items:center;">
                         <span class="drag-hint"><i class="ri-drag-move-line"></i> Drag panels to rearrange</span>
-                        <button class="hdr-btn" onclick="resetDashboardLayout()" style="padding:4px 10px; font-size:10px;"><i class="ri-layout-masonry-line"></i> Reset Layout</button>
+                        <button class="hdr-btn" onclick="resetDashboardLayout()"
+                            style="padding:4px 10px; font-size:10px;"><i class="ri-layout-masonry-line"></i> Reset
+                            Layout</button>
                     </div>
                 </div>
                 <div class="cards-grid" id="statsGrid"></div>
                 <div class="drag-grid" id="dashGrid">
                     <div class="drag-panel" draggable="true" data-panel="velocity">
-                        <div class="panel-header"><i class="ri-speed-line"></i> Transaction Velocity</div>
+                        <div class="panel-header"><i class="ri-speed-line"></i> Event Velocity</div>
                         <div id="dash-velocity" style="height:260px"></div>
                     </div>
                     <div class="drag-panel" draggable="true" data-panel="network">
@@ -109,11 +107,11 @@
                         <div id="mini-graph" style="height:260px"></div>
                     </div>
                     <div class="drag-panel" draggable="true" data-panel="donut">
-                        <div class="panel-header"><i class="ri-pie-chart-2-line"></i> Risk Distribution</div>
+                        <div class="panel-header"><i class="ri-pie-chart-2-line"></i> Alert Distribution</div>
                         <div id="dash-donut" style="height:260px"></div>
                     </div>
                     <div class="drag-panel" draggable="true" data-panel="radar">
-                        <div class="panel-header"><i class="ri-radar-line"></i> Threat Radar</div>
+                        <div class="panel-header"><i class="ri-radar-line"></i> Threat Attack</div>
                         <div id="dash-radar" style="height:260px"></div>
                     </div>
                     <div class="drag-panel full-width" draggable="true" data-panel="sankey">
@@ -129,7 +127,8 @@
                     <h2 class="fraud-title">Fraud Detection</h2>
                     <div class="fraud-search">
                         <input type="text" id="fraudSearchInput" placeholder="Enter entity ID..." value="C135">
-                        <button class="fraud-analyze-btn" onclick="analyzeFraudEntity()"><i class="ri-search-eye-line"></i> Analyze</button>
+                        <button class="fraud-analyze-btn" onclick="analyzeFraudEntity()"><i
+                                class="ri-search-eye-line"></i> Analyze</button>
                     </div>
                     <div class="fraud-stats">
                         <div class="fraud-stat">Risk <strong id="fraudRiskScore">0.00</strong></div>
@@ -140,16 +139,20 @@
                 <div class="fraud-layout">
                     <div class="fraud-controls">
                         <div class="fraud-controls-title">Highlight Patterns</div>
-                        <button class="fraud-pattern-btn" data-pattern="shell" onclick="highlightPattern('shell', this)">
+                        <button class="fraud-pattern-btn" data-pattern="shell"
+                            onclick="highlightPattern('shell', this)">
                             <i class="ri-building-2-line"></i> Shell Chains
                         </button>
-                        <button class="fraud-pattern-btn" data-pattern="circular" onclick="highlightPattern('circular', this)">
+                        <button class="fraud-pattern-btn" data-pattern="circular"
+                            onclick="highlightPattern('circular', this)">
                             <i class="ri-loop-left-line"></i> Circular Trade
                         </button>
-                        <button class="fraud-pattern-btn active" data-pattern="influence" onclick="highlightPattern('influence', this)">
+                        <button class="fraud-pattern-btn active" data-pattern="influence"
+                            onclick="highlightPattern('influence', this)">
                             <i class="ri-eye-line"></i> Hidden Influence
                         </button>
-                        <button class="fraud-pattern-btn" data-pattern="reset" onclick="highlightPattern('reset', this)">
+                        <button class="fraud-pattern-btn" data-pattern="reset"
+                            onclick="highlightPattern('reset', this)">
                             <i class="ri-refresh-line"></i> Reset
                         </button>
                     </div>
@@ -160,165 +163,171 @@
                             <div class="fraud-legend-item"><span class="fraud-dot high"></span> High (≥ 0.7)</div>
                             <div class="fraud-legend-item"><span class="fraud-dot medium"></span> Medium (0.4–0.7)</div>
                             <div class="fraud-legend-item"><span class="fraud-dot low"></span> Low (< 0.4)</div>
-                            <div class="fraud-legend-item"><span class="fraud-dot query"></span> Query Company</div>
+                                    <div class="fraud-legend-item"><span class="fraud-dot query"></span> Query Company
+                                    </div>
+                            </div>
+                        </div>
+                        <div class="fraud-patterns-panel">
+                            <h3>Detected Patterns</h3>
+
+                            <div class="fraud-pattern-section">
+                                <h4>Shell Company Chains</h4>
+                                <div id="fraudShellChains" class="fraud-pattern-content"></div>
+                            </div>
+
+                            <div class="fraud-pattern-section">
+                                <h4>Circular Trade</h4>
+                                <div id="fraudCircularTrade" class="fraud-pattern-content"></div>
+                            </div>
+
+                            <div class="fraud-pattern-section">
+                                <h4>Hidden Influence</h4>
+                                <div id="fraudHiddenInfluence" class="fraud-pattern-content"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="fraud-patterns-panel">
-                        <h3>Detected Patterns</h3>
+                </div>
 
-                        <div class="fraud-pattern-section">
-                            <h4>Shell Company Chains</h4>
-                            <div id="fraudShellChains" class="fraud-pattern-content"></div>
+
+                <!-- ANOMALIES -->
+                <div class="section" id="sec-anomalies">
+                    <div class="section-header">
+                        <h2><i class="ri-alarm-warning-line"></i> Anomaly Intelligence & Alerts</h2>
+                    </div>
+
+                    <div class="cards-grid" id="anomalyStatsGrid" style="margin-bottom:14px"></div>
+
+                    <div class="drag-grid">
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-bar-chart-grouped-line"></i> Volume vs. Severity
+                            </div>
+                            <div id="anomaly-bar-chart" style="height:240px"></div>
                         </div>
-
-                        <div class="fraud-pattern-section">
-                            <h4>Circular Trade</h4>
-                            <div id="fraudCircularTrade" class="fraud-pattern-content"></div>
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-time-line"></i> Real-time Detection Timeline</div>
+                            <div id="anomaly-timeline" style="height:240px"></div>
                         </div>
-
-                        <div class="fraud-pattern-section">
-                            <h4>Hidden Influence</h4>
-                            <div id="fraudHiddenInfluence" class="fraud-pattern-content"></div>
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-git-merge-line"></i> Anomaly Types & Signatures</div>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <div id="anomaly-types-pie" style="flex: 1; min-width: 300px; height:280px"></div>
+                                <div id="anomaly-types-desc"
+                                    style="flex: 1; min-width: 300px; height:280px; overflow-y: auto; padding-right: 10px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-list-check-2"></i> Live Alert Feed</div>
+                            <div class="anomaly-filter-bar" style="margin-bottom:12px; display:flex; gap:8px;">
+                                <button class="hdr-btn pulse-active" onclick="filterAlerts('all',this)">All</button>
+                                <button class="hdr-btn" onclick="filterAlerts('critical',this)"
+                                    style="color:var(--red); border-color:rgba(255,61,61,0.3)">Critical</button>
+                                <button class="hdr-btn" onclick="filterAlerts('warning',this)"
+                                    style="color:var(--orange); border-color:rgba(255,152,0,0.3)">Warning</button>
+                                <button class="hdr-btn" onclick="filterAlerts('info',this)">Info</button>
+                            </div>
+                            <div id="alertFeed" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto; padding-right:10px;"></div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- FUND FLOWS -->
-            <div class="section" id="sec-fundflows">
-                <div class="section-header">
-                    <h2><i class="ri-git-branch-line"></i> Knowledge Graph – Fund Flow Network</h2>
-                </div>
-                <div class="panel">
-                    <div id="graph-container"></div>
-                    <div class="tooltip" id="graphTooltip"></div>
-                </div>
-            </div>
-
-            <!-- ANOMALIES -->
-            <div class="section" id="sec-anomalies">
-                <div class="section-header">
-                    <h2><i class="ri-alarm-warning-line"></i> Anomaly Alert Feed</h2>
-                </div>
-                <div class="anomaly-stats-row" id="anomalyStats"></div>
-                <div class="panel">
-                    <div class="anomaly-filter-bar">
-                        <button class="anomaly-filter active" onclick="filterAlerts('all',this)">All</button>
-                        <button class="anomaly-filter" onclick="filterAlerts('critical',this)">Critical</button>
-                        <button class="anomaly-filter" onclick="filterAlerts('warning',this)">Warning</button>
-                        <button class="anomaly-filter" onclick="filterAlerts('info',this)">Info</button>
-                    </div>
-                    <div id="alertFeed"></div>
-                </div>
-                <div class="drag-grid" style="margin-top:14px">
-                    <div class="panel">
-                        <div class="panel-header"><i class="ri-bar-chart-grouped-line"></i> Anomaly Distribution</div>
-                        <div id="anomaly-bar-chart" style="height:280px"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header"><i class="ri-time-line"></i> Anomaly Timeline</div>
-                        <div id="anomaly-timeline" style="height:280px"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- METRICS -->
-            <div class="section" id="sec-metrics">
-                <div class="section-header">
-                    <h2><i class="ri-line-chart-line"></i> Real-Time Metrics</h2>
-                </div>
-                <div class="panel">
-                    <div class="panel-header"><i class="ri-speed-line"></i> Transaction Velocity</div>
-                    <div id="linechart-container" style="height:300px"></div>
-                </div>
-                <div class="drag-grid">
-                    <div class="panel">
-                        <div class="panel-header"><i class="ri-route-line"></i> Fund Flow Sankey</div>
-                        <div id="sankey-container" style="height:400px"></div>
+                <!-- METRICS -->
+                <div class="section" id="sec-metrics">
+                    <div class="section-header">
+                        <h2><i class="ri-line-chart-line"></i> Real-Time Metrics</h2>
                     </div>
                     <div class="panel">
-                        <div class="panel-header"><i class="ri-bubble-chart-line"></i> Volume Bubble Chart</div>
-                        <div id="bubble-chart" style="height:400px"></div>
+                        <div class="panel-header"><i class="ri-speed-line"></i> Event Velocity</div>
+                        <div id="linechart-container" style="height:300px"></div>
+                    </div>
+                    <div class="drag-grid">
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-route-line"></i> Fund Flow Sankey</div>
+                            <div id="sankey-container" style="height:400px"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-bubble-chart-line"></i> Volume Bubble Chart</div>
+                            <div id="bubble-chart" style="height:400px"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- HEATMAP -->
-            <div class="section" id="sec-heatmap">
-                <div class="section-header">
-                    <h2><i class="ri-fire-line"></i> Branch Risk Heatmap</h2>
-                </div>
-                <div class="panel">
-                    <div id="heatmap-container" style="height:calc(100vh - 160px)"></div>
-                </div>
-            </div>
-
-            <!-- RISK ALERTS -->
-            <div class="section" id="sec-risk">
-                <div class="section-header">
-                    <h2><i class="ri-shield-star-line"></i> Risk Alert Center</h2>
-                </div>
-                <div class="risk-overview-grid" id="riskOverviewGrid"></div>
-                <div class="drag-grid" style="margin-top:14px">
-                    <div class="panel">
-                        <div class="panel-header"><i class="ri-line-chart-line"></i> Risk Score Trend</div>
-                        <div id="risk-trend-chart" style="height:300px"></div>
+                <!-- HEATMAP -->
+                <div class="section" id="sec-heatmap">
+                    <div class="section-header">
+                        <h2><i class="ri-fire-line"></i> Branch Risk Heatmap</h2>
                     </div>
                     <div class="panel">
-                        <div class="panel-header"><i class="ri-pie-chart-2-line"></i> Risk Category Breakdown</div>
-                        <div id="risk-category-chart" style="height:300px"></div>
+                        <div id="heatmap-container" style="height:calc(100vh - 160px)"></div>
                     </div>
                 </div>
-                <div class="panel" style="margin-top:14px">
-                    <div class="panel-header"><i class="ri-list-check-2"></i> Active Risk Alerts</div>
-                    <div id="riskAlertList"></div>
-                </div>
-            </div>
 
-            <!-- PROFILE -->
-            <div class="section" id="sec-profile">
-                <div class="section-header">
-                    <h2><i class="ri-user-search-line"></i> Entity Profile Scanner</h2>
+                <!-- RISK ALERTS -->
+                <div class="section" id="sec-risk">
+                    <div class="section-header">
+                        <h2><i class="ri-shield-star-line"></i> Risk Alert Center</h2>
+                    </div>
+                    <div class="risk-overview-grid" id="riskOverviewGrid"></div>
+                    <div class="drag-grid" style="margin-top:14px">
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-line-chart-line"></i> Risk Score Trend</div>
+                            <div id="risk-trend-chart" style="height:300px"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header"><i class="ri-pie-chart-2-line"></i> Risk Category Breakdown</div>
+                            <div id="risk-category-chart" style="height:300px"></div>
+                        </div>
+                    </div>
+                    <div class="panel" style="margin-top:14px">
+                        <div class="panel-header"><i class="ri-list-check-2"></i> Active Risk Alerts</div>
+                        <div id="riskAlertList"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div id="profileArea"></div>
-                </div>
-            </div>
 
-            <!-- EVIDENCE -->
-            <div class="section" id="sec-evidence">
-                <div class="section-header">
-                    <h2><i class="ri-folder-shield-2-line"></i> Evidence Export Center</h2>
+                <!-- PROFILE -->
+                <div class="section" id="sec-profile">
+                    <div class="section-header">
+                        <h2><i class="ri-user-search-line"></i> Entity Profile Scanner</h2>
+                    </div>
+                    <div class="panel">
+                        <div id="profileArea"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="export-grid">
-                        <div class="export-item" onclick="alert('Generating STR PDF...')"><i
-                                class="ri-file-pdf-2-line ei-icon"></i>
-                            <div class="ei-label">STR Report</div>
-                        </div>
-                        <div class="export-item" onclick="alert('Exporting Graph PNG...')"><i
-                                class="ri-image-line ei-icon"></i>
-                            <div class="ei-label">Graph Snapshot</div>
-                        </div>
-                        <div class="export-item" onclick="alert('Generating Timeline CSV...')"><i
-                                class="ri-file-excel-2-line ei-icon"></i>
-                            <div class="ei-label">Timeline CSV</div>
-                        </div>
-                        <div class="export-item" onclick="alert('Packaging FIU Bundle...')"><i
-                                class="ri-archive-line ei-icon"></i>
-                            <div class="ei-label">FIU Package</div>
-                        </div>
-                        <div class="export-item" onclick="alert('Exporting Sankey SVG...')"><i
-                                class="ri-flow-chart ei-icon"></i>
-                            <div class="ei-label">Sankey Export</div>
-                        </div>
-                        <div class="export-item" onclick="alert('Creating Audit Log...')"><i
-                                class="ri-shield-check-line ei-icon"></i>
-                            <div class="ei-label">Audit Trail</div>
+
+                <!-- EVIDENCE -->
+                <div class="section" id="sec-evidence">
+                    <div class="section-header">
+                        <h2><i class="ri-folder-shield-2-line"></i> Evidence Export Center</h2>
+                    </div>
+                    <div class="panel">
+                        <div class="export-grid">
+                            <div class="export-item" onclick="alert('Generating STR PDF...')"><i
+                                    class="ri-file-pdf-2-line ei-icon"></i>
+                                <div class="ei-label">STR Report</div>
+                            </div>
+                            <div class="export-item" onclick="alert('Exporting Graph PNG...')"><i
+                                    class="ri-image-line ei-icon"></i>
+                                <div class="ei-label">Graph Snapshot</div>
+                            </div>
+                            <div class="export-item" onclick="alert('Generating Timeline CSV...')"><i
+                                    class="ri-file-excel-2-line ei-icon"></i>
+                                <div class="ei-label">Timeline CSV</div>
+                            </div>
+                            <div class="export-item" onclick="alert('Packaging FIU Bundle...')"><i
+                                    class="ri-archive-line ei-icon"></i>
+                                <div class="ei-label">FIU Package</div>
+                            </div>
+                            <div class="export-item" onclick="alert('Exporting Sankey SVG...')"><i
+                                    class="ri-flow-chart ei-icon"></i>
+                                <div class="ei-label">Sankey Export</div>
+                            </div>
+                            <div class="export-item" onclick="alert('Creating Audit Log...')"><i
+                                    class="ri-shield-check-line ei-icon"></i>
+                                <div class="ei-label">Audit Trail</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
         </main>
     </div>
 
