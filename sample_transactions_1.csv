@@ -1,0 +1,11 @@
+source,target,amount,risk,date,type,location
+C135,C330,500000,0.85,2023-10-12,transfer,Dubai
+C330,C132,450000,0.92,2023-10-13,transfer,Cayman Islands
+C132,S101,400000,0.95,2023-10-14,layering,Panama
+S101,C294,380000,0.88,2023-10-15,layering,Cyprus
+C10,C20,5000,0.1,2023-10-15,payment,New York
+C20,C30,4500,0.1,2023-10-16,payment,London
+C50,C51,1200000,0.8,2023-10-16,transfer,Singapore
+C51,C52,1100000,0.85,2023-10-17,layering,Hong Kong
+C52,C53,900000,0.91,2023-10-18,placement,Macau
+C60,C61,50000,0.6,2023-10-18,transfer,London

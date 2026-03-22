@@ -307,7 +307,73 @@ function renderFraudPatterns() {
     `).join('');
 }
 
-// ==================== DASHBOARD STATS ====================
+// ==================== CHATBOT ====================
+let _chatOpen = false;
+let _chatFullscreen = false;
+
+function toggleChatbot() {
+    _chatOpen = !_chatOpen;
+    const cw = document.getElementById('chatbot-window');
+    const orb = document.getElementById('chatbot-orb');
+    if (_chatOpen) {
+        cw.classList.add('opened');
+        orb.style.transform = 'scale(0)';
+    } else {
+        cw.classList.remove('opened');
+        orb.style.transform = 'scale(1)';
+    }
+}
+
+function toggleChatFullscreen() {
+    _chatFullscreen = !_chatFullscreen;
+    const cw = document.getElementById('chatbot-window');
+    const icon = document.getElementById('chat-fs-icon');
+    if (_chatFullscreen) {
+        cw.classList.add('fullscreen');
+        icon.className = 'ri-fullscreen-exit-line';
+    } else {
+        cw.classList.remove('fullscreen');
+        icon.className = 'ri-fullscreen-line';
+    }
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendMsg('user', text);
+    input.value = '';
+
+    // Dummy bot response
+    setTimeout(() => {
+        const responses = [
+            "Analyzing the recent velocity spike...",
+            "The cluster C135 seems heavily influenced by dormant accounts.",
+            "I've flagged that transaction as a critical severity risk.",
+            "Checking global watchlist databases... all clear.",
+            "That query requires deeper link-analysis. Generating sub-graph..."
+        ];
+        appendMsg('bot', responses[Math.floor(Math.random() * responses.length)]);
+    }, 600);
+}
+
+function handleChatKey(e) {
+    if (e.key === 'Enter') sendChatMessage();
+}
+
+function appendMsg(sender, text) {
+    const body = document.getElementById('chatBody');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-msg ${sender}`;
+    msgDiv.innerHTML = `<div class="msg-bubble">${text}</div>`;
+    body.appendChild(msgDiv);
+    body.scrollTop = body.scrollHeight;
+}
+window.toggleChatbot = toggleChatbot;
+window.toggleChatFullscreen = toggleChatFullscreen;
+window.sendChatMessage = sendChatMessage;
+window.handleChatKey = handleChatKey;// ==================== DASHBOARD STATS ====================
 function renderStats() {
     const stats = [
         { icon: 'ri-money-dollar-circle-line', label: 'Total Flows', value: '₹4.2Cr', change: '+12.4%', dir: 'up' },
@@ -932,14 +998,240 @@ window.filterAlerts = function (type, el) {
 function renderProfiles() {
     const pa = document.getElementById('profileArea');
     if (pa) pa.innerHTML = ['krish ramani', 'priya sharma', 'arjun mehta', 'rohan desai'].map(n => `
-        <div class="profile-card">
+        <div class="profile-card" onclick="openProfileModal('${n}')" style="cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
             <div class="profile-avatar"><i class="ri-user-3-line"></i></div>
             <div class="profile-info">
                 <h3 style="text-transform:uppercase">${n}</h3>
                 <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim)">ID: CUST${R(100, 999)} · Branch: HQ</div>
                 <div class="risk-gauge"><div class="risk-gauge-fill" style="width:${R(30, 90)}%; background:var(--accent)"></div></div>
                 <div><span class="flag-tag">Velocity Spike</span><span class="flag-tag">Hub Node</span></div>
-            </div>
         </div>
     `).join('');
 }
+
+// ==================== CSV IMPORT LOGIC ====================
+let globalCSVData = null;
+
+function handleCSVUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        globalCSVData = d3.csvParse(text);
+        
+        // Show success alert natively
+        alert(`Successfully imported ${globalCSVData.length} records! Updating NeoTrack dashboard...`);
+        
+        // Apply data globally
+        updateDashboardWithCSV();
+    };
+    reader.readAsText(file);
+}
+
+function updateDashboardWithCSV() {
+    if (!globalCSVData || globalCSVData.length === 0) return;
+    
+    let totalVol = 0;
+    let criticalCount = 0;
+    const uniqueNodes = new Set();
+    const alerts = [];
+    const profiles = [];
+
+    globalCSVData.forEach(d => {
+        const amt = parseFloat(d.amount) || 0;
+        const risk = parseFloat(d.risk) || 0;
+        totalVol += amt;
+        if(d.source) uniqueNodes.add(d.source);
+        if(d.target) uniqueNodes.add(d.target);
+        
+        if (risk > 0.7) {
+            criticalCount++;
+            alerts.push({
+                type: risk > 0.9 ? 'critical' : 'warning',
+                color: risk > 0.9 ? 'var(--red)' : 'var(--orange)',
+                icon: risk > 0.9 ? 'ri-error-warning-fill' : 'ri-alert-fill',
+                label: risk > 0.9 ? 'CRITICAL' : 'WARNING',
+                text: `${(d.type || 'Transaction').toUpperCase()} detected from ${d.source} to ${d.target} ($${amt.toLocaleString()}) at ${d.location || 'Unknown'}.`
+            });
+        }
+        
+        if (d.source && !profiles.includes(d.source)) profiles.push(d.source);
+    });
+
+    // 1. Update Dashboard Stats Grid (Overview)
+    const statsGrid = document.getElementById('statsGrid');
+    if (statsGrid) {
+        statsGrid.innerHTML = `
+            <div class="stat-card"><i class="ri-money-dollar-circle-line icon"></i><div class="label">CSV Total Volume</div><div class="value">$${(totalVol/1000).toFixed(1)}K</div><div class="change up">▲ Live Data</div></div>
+            <div class="stat-card"><i class="ri-shield-check-line icon"></i><div class="label">Monitored Entities</div><div class="value">${uniqueNodes.size}</div><div class="change up">▲ Live Data</div></div>
+            <div class="stat-card"><i class="ri-focus-3-line icon"></i><div class="label">Transactions</div><div class="value">${globalCSVData.length}</div><div class="change up">▲ Live Data</div></div>
+            <div class="stat-card"><i class="ri-error-warning-line icon" style="color:var(--red)"></i><div class="label">Critical High-Risk</div><div class="value" style="color:var(--red)">${criticalCount}</div><div class="change down">▼ Action Required</div></div>
+        `;
+    }
+
+    // 2. Update Live Alerts
+    const feed = document.getElementById('alertFeed');
+    if (feed && alerts.length > 0) {
+        feed.innerHTML = alerts.slice(0, 15).map((d, i) => `
+            <div class="alert-item ${d.type}" style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-left:3px solid ${d.color}; border-radius:6px; cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+                <i class="${d.icon}" style="color:${d.color}; font-size:16px;"></i>
+                <span class="alert-badge" style="font-size:9px; font-family:var(--font-mono); color:${d.color}; border:1px solid ${d.color}; padding:2px 6px; border-radius:4px; letter-spacing:1px; width:60px; text-align:center;">${d.label}</span>
+                <span class="alert-text" style="font-size:13px; color:var(--text); flex:1;">${d.text}</span>
+                <span class="alert-time" style="font-size:10px; color:var(--text-dim); font-family:var(--font-mono);">Just now</span>
+            </div>
+        `).join('');
+        
+        const ra = document.getElementById('riskAlertList');
+        if(ra) ra.innerHTML = feed.innerHTML; 
+    }
+
+    // 3. Update Profiles Feed
+    const pa = document.getElementById('profileArea');
+    if (pa && profiles.length > 0) {
+        pa.innerHTML = Array.from(new Set(profiles)).slice(0, 12).map(n => `
+            <div class="profile-card" onclick="openProfileModal('${n}')" style="cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <div class="profile-avatar"><i class="ri-building-line"></i></div>
+                <div class="profile-info">
+                    <h3 style="text-transform:uppercase">${n}</h3>
+                    <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim)">Entity Type: ${Math.random()>0.5?'Corporate':'Individual'}</div>
+                    <div class="risk-gauge"><div class="risk-gauge-fill" style="width:${Math.max(20, Math.random()*100)}%; background:var(--accent)"></div></div>
+                    <div><span class="flag-tag">CSV Imported</span><span class="flag-tag">Verified</span></div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // 4. Update Fraud Network Graph dynamically with nodes/edges from CSV
+    const container = document.getElementById('fraud-network-graph');
+    if (container) {
+        container.innerHTML = '';
+        const w = container.clientWidth || 800, h = container.clientHeight || 500;
+        const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${w} ${h}`);
+        const g = svg.append('g');
+        svg.call(d3.zoom().scaleExtent([0.2, 4]).on('zoom', e => g.attr('transform', e.transform)));
+        
+        svg.append('defs').append('marker')
+            .attr('id', 'arrow-head-csv')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 18).attr('refY', 0)
+            .attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto')
+            .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#ef6c00');
+
+        const nodes = Array.from(uniqueNodes).map(id => ({id: id, label: id, risk: Math.random()}));
+        const links = globalCSVData.map(d => ({
+            source: d.source, target: d.target, label: d.type
+        })).filter(l => l.source && l.target && l.source !== l.target);
+
+        const riskEl = document.getElementById('fraudRiskScore');
+        if(riskEl) riskEl.textContent = (criticalCount / Math.max(1, globalCSVData.length)).toFixed(2);
+        const entEl = document.getElementById('fraudEntities');
+        if(entEl) entEl.textContent = uniqueNodes.size;
+        const linkEl = document.getElementById('fraudLinks');
+        if(linkEl) linkEl.textContent = links.length;
+
+        const sim = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+            .force('charge', d3.forceManyBody().strength(-400))
+            .force('center', d3.forceCenter(w/2, h/2));
+
+        const linkLine = g.selectAll('.link').data(links).enter().append('line')
+            .attr('stroke', 'rgba(255,255,255,0.2)').attr('stroke-width', 2).attr('marker-end', 'url(#arrow-head-csv)');
+            
+        const nodeGroup = g.selectAll('.node').data(nodes).enter().append('g');
+        nodeGroup.append('circle').attr('r', 16)
+            .attr('fill', d => d.risk > 0.7 ? '#ef6c00' : '#3b82f6')
+            .attr('stroke', '#fff').attr('stroke-width', 2);
+        nodeGroup.append('text').text(d => d.label).attr('fill', '#fff').attr('font-size', '12px').attr('font-family', 'var(--font-mono)').attr('y', 28).attr('text-anchor', 'middle');
+
+        sim.on('tick', () => {
+            linkLine.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+    }
+}
+window.handleCSVUpload = handleCSVUpload;
+
+// ==================== PROFILE MODAL LOGIC ====================
+function openProfileModal(entity) {
+    const modal = document.getElementById('profile-modal');
+    if(!modal) return;
+    
+    document.getElementById('modalId').textContent = entity.toUpperCase();
+    modal.classList.add('active');
+
+    // Filter data for this entity safely based on whether CSV data exists or mock otherwise
+    const relTxs = globalCSVData ? globalCSVData.filter(d => d.source === entity || d.target === entity) : [
+        { source: entity, target: 'EXTERNAL_1', amount: 500000, type: 'transfer', date: '2023-11-01' },
+        { source: 'EXTERNAL_2', target: entity, amount: 200000, type: 'payment', date: '2023-11-02' }
+    ];
+    
+    // Draw chain graph
+    const cEl = document.getElementById('modal-chain-graph');
+    cEl.innerHTML = '';
+    if(relTxs.length > 0) {
+        const w = cEl.clientWidth || 400, h = cEl.clientHeight || 280;
+        const svg = d3.select(cEl).append('svg').attr('viewBox', `0 0 ${w} ${h}`);
+        
+        let nodes = new Set(), links = [];
+        relTxs.forEach(tx => {
+            nodes.add(tx.source); nodes.add(tx.target);
+            links.push({source: tx.source, target: tx.target});
+        });
+        
+        const nodeArr = Array.from(nodes).map(id => ({id, main: id===entity}));
+        
+        const sim = d3.forceSimulation(nodeArr)
+            .force('link', d3.forceLink(links).id(d=>d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-300))
+            .force('center', d3.forceCenter(w/2, h/2));
+            
+        svg.append('defs').append('marker').attr('id','arrow-modal')
+            .attr('viewBox', '0 -5 10 10').attr('refX', 18).attr('refY', 0)
+            .attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+            .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','var(--accent)');
+            
+        const linkLine = svg.selectAll('.m-link').data(links).enter().append('line')
+            .attr('stroke', 'var(--border-light)').attr('stroke-width', 2).attr('marker-end','url(#arrow-modal)');
+            
+        const nGroup = svg.selectAll('.m-node').data(nodeArr).enter().append('g');
+        nGroup.append('circle').attr('r', 16).attr('fill', d=>d.main ? 'var(--red)' : '#3b82f6')
+            .attr('stroke', '#fff').attr('stroke-width', 2);
+        nGroup.append('text').text(d=>d.id).attr('fill','#fff').attr('font-size','10px').attr('font-family','var(--font-mono)').attr('y',26).attr('text-anchor','middle');
+        
+        sim.on('tick', () => {
+            linkLine.attr('x1', d=>d.source.x).attr('y1', d=>d.source.y).attr('x2', d=>d.target.x).attr('y2', d=>d.target.y);
+            nGroup.attr('transform', d=>`translate(${d.x},${d.y})`);
+        });
+    } else {
+        cEl.innerHTML = '<div style="padding:20px; color:var(--text-dim); font-family:var(--font-mono);">No network data found.</div>';
+    }
+    
+    // Draw Activity List
+    const tEl = document.getElementById('modal-tx-list');
+    if(relTxs.length > 0) {
+        tEl.innerHTML = relTxs.map(tx => `
+            <div style="padding:12px; margin-bottom:10px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; font-size:12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="color:var(--accent); font-family:var(--font-mono); font-weight:bold; letter-spacing:1px;">${tx.type ? tx.type.toUpperCase() : 'TRANSFER'}</span>
+                    <span style="color:var(--white); font-weight:bold; font-size:14px;">₹${parseFloat(tx.amount).toLocaleString()}</span>
+                </div>
+                <div style="color:var(--text-dim); display:flex; justify-content:space-between; font-size:11px;">
+                    <span><i class="ri-arrow-right-line"></i> ${tx.source} <span style="color:var(--white)">→</span> ${tx.target}</span>
+                    <span style="font-family:var(--font-mono); opacity:0.7;">${tx.date || 'Live Data'}</span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        tEl.innerHTML = '<div style="padding:20px; color:var(--text-dim); font-family:var(--font-mono);">No transactions found.</div>';
+    }
+}
+
+function closeProfileModal(e) {
+    if(e && e.target.id !== 'profile-modal' && e.target.className !== 'modal-close') return;
+    const m = document.getElementById('profile-modal');
+    if(m) m.classList.remove('active');
+}
+window.openProfileModal = openProfileModal;
+window.closeProfileModal = closeProfileModal;
