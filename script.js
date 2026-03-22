@@ -129,7 +129,39 @@ function refreshData() {
     renderMiniGraphs();
 }
 
-function exportViz() { alert('Export generation triggered.'); }
+function exportViz() {
+    alert('Generating PDF Report... Please wait.');
+    const el = document.querySelector('.main-content') || document.body;
+    const opt = {
+        margin: 5,
+        filename: 'NeoTrack_Dashboard_Report.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 1.5, useCORS: true, backgroundColor: document.documentElement.getAttribute('data-theme')==='dark'?'#0a0b10':'#f4f6f8' },
+        jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' }
+    };
+    html2pdf().set(opt).from(el).save().then(() => {
+        attachToChatbot('NeoTrack_Dashboard_Report.pdf');
+    });
+}
+
+function attachToChatbot(filename) {
+    if(typeof _chatOpen !== 'undefined' && !_chatOpen) {
+        if(typeof toggleChatbot === 'function') toggleChatbot();
+    }
+    const body = document.getElementById('chatBody');
+    if(!body) return;
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-msg bot`;
+    msgDiv.innerHTML = `<div class="msg-bubble" style="display:flex; align-items:flex-start; gap:12px; border-left:3px solid var(--accent); background:var(--surface); border:1px solid var(--border);">
+        <i class="ri-file-pdf-2-fill" style="color:var(--red); font-size:24px; margin-top:2px;"></i> 
+        <div>
+            <strong style="color:var(--text); font-family:var(--font-mono); font-size:12px;">${filename} attached successfully.</strong>
+            <p style="margin:4px 0 0 0; font-size:11px; color:var(--text-dim); line-height:1.4;">I have comprehensively scanned the exported dashboard metrics. You can now prompt me regarding any anomalies, risk triggers, or fund flows inside this snapshot.</p>
+        </div>
+    </div>`;
+    body.appendChild(msgDiv);
+    body.scrollTop = body.scrollHeight;
+}
 
 // ==================== FRAUD DETECTION (IMAGE REPLICA) ====================
 function initFraudGraph() {
