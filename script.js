@@ -5,6 +5,92 @@ const pick = a => a[R(0, a.length - 1)];
 const fmt = n => n >= 1e7 ? '₹' + (n / 1e7).toFixed(1) + 'Cr' : n >= 1e5 ? '₹' + (n / 1e5).toFixed(1) + 'L' : '₹' + n.toLocaleString('en-IN');
 let crazyMode = false, themePulse = false;
 
+function escapeHtml(input) {
+    return String(input ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ==================== DATA LOAD STATE ====================
+let globalCSVData = null;
+function hasCSVData() {
+    return Array.isArray(globalCSVData) && globalCSVData.length > 0;
+}
+
+// ==================== PROFILE DIRECTORY (HARDCODED) ====================
+// Used by the Profile Scanner + chatbot narration.
+const PROFILE_DIRECTORY = [
+    { id: 'C335', type: 'Corporate' },
+    { id: 'C352', type: 'Individual' },
+    { id: 'C326', type: 'Corporate' },
+    { id: 'C054', type: 'Corporate' },
+    { id: 'C365', type: 'Corporate' },
+    { id: 'S146', type: 'Corporate' },
+    { id: 'C204', type: 'Corporate' },
+    { id: 'C268', type: 'Individual' },
+    { id: 'C314', type: 'Individual' },
+    { id: 'C016', type: 'Individual' },
+    { id: 'S130', type: 'Individual' },
+    { id: 'C292', type: 'Individual' },
+];
+
+const PROFILE_TYPE_BY_ID = new Map(PROFILE_DIRECTORY.map(e => [e.id, e.type]));
+function getEntityType(entityId) {
+    const id = String(entityId ?? '');
+    if (PROFILE_TYPE_BY_ID.has(id)) return PROFILE_TYPE_BY_ID.get(id);
+    if (/^SHELL_/i.test(id) || /^MERCHANT_/i.test(id)) return 'Corporate';
+    if (/^ACCOUNT_/i.test(id) || /^NORMAL_/i.test(id)) return 'Individual';
+    if (/^C\d+/i.test(id)) return 'Corporate';
+    return 'Entity';
+}
+
+function renderEmptyState() {
+    // Dashboard (overview)
+    ['statsGrid', 'dash-velocity', 'mini-graph', 'dash-donut', 'dash-radar', 'dash-sankey'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+
+    // Anomalies
+    ['anomalyStatsGrid', 'anomaly-bar-chart', 'anomaly-timeline', 'anomaly-types-pie', 'anomaly-types-desc'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+
+    // Metrics
+    ['linechart-container', 'sankey-container', 'bubble-chart'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+
+    // Heatmap
+    const heat = document.getElementById('heatmap-container');
+    if (heat) heat.innerHTML = '';
+
+    // Risk
+    ['riskOverviewGrid', 'risk-trend-chart', 'risk-category-chart'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+
+    // Alerts + profiles
+    ['alertFeed', 'riskAlertList', 'profileArea'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+
+    // Fraud section
+    const fraudGraph = document.getElementById('fraud-network-graph');
+    if (fraudGraph) fraudGraph.innerHTML = '';
+    ['fraudRiskScore', 'fraudEntities', 'fraudLinks'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+    });
+}
+
 // ==================== THEME MANAGEMENT ====================
 function getTheme() { return document.documentElement.getAttribute('data-theme') || 'dark'; }
 
@@ -13,7 +99,7 @@ function toggleTheme() {
     const curr = getTheme();
     const next = curr === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
-    localStorage.setItem('neotrack-theme', next);
+    localStorage.setItem('fundsentinel-theme', next);
 
     // Update icons and labels
     const icon = document.getElementById('themeIcon');
@@ -21,16 +107,21 @@ function toggleTheme() {
     if (icon) icon.className = next === 'dark' ? 'ri-moon-line' : 'ri-sun-line';
     if (label) label.textContent = next === 'dark' ? 'Light' : 'Dark';
 
-    // Re-render complex charts for color updates
+    // Re-render complex charts for color updates (only after CSV import)
+    if (!hasCSVData()) {
+        renderEmptyState();
+        return;
+    }
+
     if (window._graphInit) { initForceGraph(); }
     if (window._heatInit) { initFullHeatmap(); }
-    if (window._fraudInit) { initFraudGraph(); }
-    if (window._metricsInit) { initLineChart(); initSankey(); }
+    if (window._fraudInit) { updateDashboardWithCSV(); }
+    if (window._metricsInit) { initLineChart(); initSankey(); initBubbleChart(); }
     renderMiniGraphs();
 }
 
 (function initTheme() {
-    const saved = localStorage.getItem('neotrack-theme');
+    const saved = localStorage.getItem('fundsentinel-theme');
     if (saved) {
         document.documentElement.setAttribute('data-theme', saved);
         const icon = document.getElementById('themeIcon');
@@ -107,11 +198,20 @@ function switchSection(id, el) {
     if (sec) sec.classList.add('active');
     if (el) el.classList.add('active');
 
-    // Lazy Load Initialization
+    // Lazy Load Initialization (only after CSV import)
+    if (!hasCSVData()) {
+        renderEmptyState();
+        return;
+    }
+
     if (id === 'fundflows' && !window._graphInit) { initForceGraph(); window._graphInit = true; }
     if (id === 'metrics' && !window._metricsInit) { initSankey(); initBubbleChart(); window._metricsInit = true; }
     if (id === 'heatmap' && !window._heatInit) { initFullHeatmap(); window._heatInit = true; }
-    if (id === 'fraud' && !window._fraudInit) { initFraudGraph(); window._fraudInit = true; }
+    if (id === 'fraud' && !window._fraudInit) {
+        // If CSV exists, keep the fraud graph driven by imported data.
+        updateDashboardWithCSV();
+        window._fraudInit = true;
+    }
 }
 
 function toggleCrazy() {
@@ -121,12 +221,21 @@ function toggleCrazy() {
 }
 
 function refreshData() {
-    renderStats();
-    if (window._graphInit) updateForceGraph();
-    if (window._fraudInit) initFraudGraph();
-    renderAlerts();
-    renderProfiles();
+    if (!hasCSVData()) {
+        renderEmptyState();
+        return;
+    }
+
+    // Recompute any data-driven panels first
+    updateDashboardWithCSV();
+
+    // Re-render the rest of the visuals (these are still mostly mock visuals)
     renderMiniGraphs();
+    initLineChart();
+    initSankey();
+    initBubbleChart();
+    renderRiskSection();
+    renderAnomalyCharts();
 }
 
 function exportViz() {
@@ -134,13 +243,13 @@ function exportViz() {
     const el = document.querySelector('.main-content') || document.body;
     const opt = {
         margin: 5,
-        filename: 'NeoTrack_Dashboard_Report.pdf',
+        filename: 'FundSentinel_Dashboard_Report.pdf',
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { scale: 1.5, useCORS: true, backgroundColor: document.documentElement.getAttribute('data-theme')==='dark'?'#0a0b10':'#f4f6f8' },
         jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' }
     };
     html2pdf().set(opt).from(el).save().then(() => {
-        attachToChatbot('NeoTrack_Dashboard_Report.pdf');
+        attachToChatbot('FundSentinel_Dashboard_Report.pdf');
     });
 }
 
@@ -377,17 +486,63 @@ function sendChatMessage() {
     appendMsg('user', text);
     input.value = '';
 
-    // Dummy bot response
-    setTimeout(() => {
-        const responses = [
-            "Analyzing the recent velocity spike...",
-            "The cluster C135 seems heavily influenced by dormant accounts.",
-            "I've flagged that transaction as a critical severity risk.",
-            "Checking global watchlist databases... all clear.",
-            "That query requires deeper link-analysis. Generating sub-graph..."
-        ];
-        appendMsg('bot', responses[Math.floor(Math.random() * responses.length)]);
-    }, 600);
+    const selectedEntity = window._selectedEntity || PROFILE_DIRECTORY[0]?.id || 'C135';
+    const selectedSafe = escapeHtml(selectedEntity);
+    const selectedType = getEntityType(selectedEntity);
+    const selectedTypeSafe = escapeHtml(selectedType);
+
+    const monitoredList = PROFILE_DIRECTORY.map(e => `${escapeHtml(e.id)} (${escapeHtml(e.type)})`).join(', ');
+
+    const demoMsgs = [
+        "You asked: <strong>Why was this account flagged?</strong>",
+        `Investigating entity: <strong>${selectedSafe}</strong> <span style="opacity:0.8">(${selectedTypeSafe})</span> (from Profile Scanner).`,
+        `Profile Scanner monitored entities: <span style="opacity:0.9">${monitoredList}</span>`
+    ];
+
+    if (!hasCSVData()) {
+        demoMsgs.push('No CSV data is loaded yet — import a CSV to populate the dashboard and enable entity-level evidence.');
+        demoMsgs.push('General reason summary: flags typically trigger on high-risk chains (multi-hop transfers, cross-border hops, and layering-like patterns).');
+    } else {
+        const relTxs = globalCSVData
+            .filter(d => d && (d.source === selectedEntity || d.target === selectedEntity))
+            .map(d => ({
+                source: escapeHtml(d.source),
+                target: escapeHtml(d.target),
+                type: escapeHtml(d.type || 'transaction'),
+                location: escapeHtml(d.location || 'Unknown'),
+                date: escapeHtml(d.date || ''),
+                amount: Number.parseFloat(d.amount) || 0,
+                risk: Number.parseFloat(d.risk) || 0,
+            }));
+
+        const maxRisk = relTxs.reduce((m, t) => Math.max(m, t.risk), 0);
+        const highCount = relTxs.filter(t => t.risk >= 0.9).length;
+
+        demoMsgs.push(`Evidence found: <strong>${relTxs.length}</strong> related transactions · high-risk (≥ 0.90): <strong>${highCount}</strong> · max risk: <strong>${maxRisk.toFixed(2)}</strong>.`);
+
+        if (relTxs.length === 0) {
+            demoMsgs.push('No direct transactions found for this entity in the imported CSV. Try selecting a different entity from Profile Scanner.');
+        } else {
+            const top = [...relTxs].sort((a, b) => b.risk - a.risk).slice(0, 4);
+            demoMsgs.push(
+                'Top related transactions (highest risk first):<br>' +
+                top.map(t => {
+                    const amt = '₹' + Math.round(t.amount).toLocaleString('en-IN');
+                    const dt = t.date ? ` ${t.date}` : '';
+                    return `•${dt} ${t.location}: <strong>${t.source}→${t.target}</strong> (${t.type}) ${amt} · risk <strong>${t.risk.toFixed(2)}</strong>`;
+                }).join('<br>')
+            );
+            demoMsgs.push('Next steps: verify source-of-funds, check beneficiary concentration, and review cross-border hops + rapid multi-hop sequences around the highest-risk edges.');
+        }
+    }
+
+    const initialDelayMs = 650;
+    const perMsgDelayMs = 850;
+    let t = initialDelayMs;
+    demoMsgs.forEach((msg) => {
+        setTimeout(() => appendMsg('bot', msg), t);
+        t += perMsgDelayMs;
+    });
 }
 
 function handleChatKey(e) {
@@ -405,7 +560,9 @@ function appendMsg(sender, text) {
 window.toggleChatbot = toggleChatbot;
 window.toggleChatFullscreen = toggleChatFullscreen;
 window.sendChatMessage = sendChatMessage;
-window.handleChatKey = handleChatKey;// ==================== DASHBOARD STATS ====================
+window.handleChatKey = handleChatKey;
+
+// ==================== DASHBOARD STATS ====================
 function renderStats() {
     const stats = [
         { icon: 'ri-money-dollar-circle-line', label: 'Total Flows', value: '₹4.2Cr', change: '+12.4%', dir: 'up' },
@@ -463,13 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
         hdr.appendChild(closeBtn);
     });
 
-    renderStats();
-    renderMiniGraphs();
-    initLineChart();
-    initSankey();
-    initBubbleChart();
-    renderRiskSection();
-    renderAnomalyCharts();
+    // Start with an empty dashboard until the user imports a CSV.
+    renderEmptyState();
 });
 
 // ==================== FUND FLOWS KNOWLEDGE GRAPH ====================
@@ -664,7 +816,7 @@ function initBubbleChart() {
 
     const isDark = getTheme() === 'dark';
 
-    // Draw dummy axes
+    // Draw axes
     svg.append('line').attr('x1', 30).attr('y1', h - 30).attr('x2', w - 10).attr('y2', h - 30)
         .attr('stroke', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)');
     svg.append('line').attr('x1', 30).attr('y1', 10).attr('x2', 30).attr('y2', h - 30)
@@ -1042,7 +1194,6 @@ function renderProfiles() {
 }
 
 // ==================== CSV IMPORT LOGIC ====================
-let globalCSVData = null;
 
 function handleCSVUpload(event) {
     const file = event.target.files[0];
@@ -1054,10 +1205,23 @@ function handleCSVUpload(event) {
         globalCSVData = d3.csvParse(text);
         
         // Show success alert natively
-        alert(`Successfully imported ${globalCSVData.length} records! Updating NeoTrack dashboard...`);
+        alert(`Successfully imported ${globalCSVData.length} records! Updating FundSentinel dashboard...`);
         
         // Apply data globally
         updateDashboardWithCSV();
+
+        // Now that data exists, render the rest of the visuals
+        renderMiniGraphs();
+        initLineChart();
+        initSankey();
+        initBubbleChart();
+        initFullHeatmap();
+        renderRiskSection();
+        renderAnomalyCharts();
+
+        // Mark sections as initialized for theme/nav refresh logic
+        window._metricsInit = true;
+        window._heatInit = true;
     };
     reader.readAsText(file);
 }
@@ -1122,12 +1286,17 @@ function updateDashboardWithCSV() {
     // 3. Update Profiles Feed
     const pa = document.getElementById('profileArea');
     if (pa && profiles.length > 0) {
-        pa.innerHTML = Array.from(new Set(profiles)).slice(0, 12).map(n => `
+        // Prefer the hard-coded Profile Scanner directory when available; fall back to CSV-derived list.
+        const displayIds = (PROFILE_DIRECTORY && PROFILE_DIRECTORY.length)
+            ? PROFILE_DIRECTORY.map(e => e.id)
+            : Array.from(new Set(profiles)).slice(0, 12);
+
+        pa.innerHTML = displayIds.slice(0, 12).map(n => `
             <div class="profile-card" onclick="openProfileModal('${n}')" style="cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div class="profile-avatar"><i class="ri-building-line"></i></div>
                 <div class="profile-info">
                     <h3 style="text-transform:uppercase">${n}</h3>
-                    <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim)">Entity Type: ${Math.random()>0.5?'Corporate':'Individual'}</div>
+                    <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim)">Entity Type: ${getEntityType(n)}</div>
                     <div class="risk-gauge"><div class="risk-gauge-fill" style="width:${Math.max(20, Math.random()*100)}%; background:var(--accent)"></div></div>
                     <div><span class="flag-tag">CSV Imported</span><span class="flag-tag">Verified</span></div>
                 </div>
@@ -1187,6 +1356,8 @@ window.handleCSVUpload = handleCSVUpload;
 
 // ==================== PROFILE MODAL LOGIC ====================
 function openProfileModal(entity) {
+    window._selectedEntity = entity;
+    window._selectedEntityType = getEntityType(entity);
     const modal = document.getElementById('profile-modal');
     if(!modal) return;
     
